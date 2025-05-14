@@ -1,0 +1,67 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+
+    container_name: rabit_sourus
+
+    ports:
+      - "5672:5672"
+      - "15672:15672" 
+
+    networks:
+      - grafana_net
+
+  valkey:
+    image: valkey/valkey
+
+    container_name: valkey_sourus
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - valkey_data:/data
+      
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s   # Wait up to 5 seconds for a response
+      retries: 5
+
+    networks:
+      - grafana_net
+
+  grafana:
+    image: grafana/grafana-enterprise
+
+    container_name: grafana_sourus
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+    ports:
+      - '3426:3000'
+
+    volumes:
+      # - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/loki.yaml
+      - grafana_data:/var/lib/grafana 
+
+    networks:
+      - grafana_net
+
+    depends_on:
+      - valkey
+      - rabbitmq
+
+volumes:
+  valkey_data:
+    driver: local
+  # loki_data:
+  #   driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  grafana_net:
+    driver: bridge

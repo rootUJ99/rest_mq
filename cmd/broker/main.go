@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,18 +27,27 @@ func Receiver(){
 	go func () {
 		for i := range messages {
 			fmt.Printf("%s", i.Body)
-			OFSRequest(i.Body)
+			DoHttpRequest(i.Body)
+			i.Nack(false, false)
 		}
 	}()
 	fmt.Println("waiting for the message press crtl + c to stop the queue clinet")
 	<-forever
 }
 
-func OFSRequest(jsonData []byte) {
-	url := "http://localhost:6969/make_ofs"
+func DoHttpRequest(jdata []byte) {
+	type jsonData struct {
+		Url string `json:"url"`
+		Method string `json:"method"` 
+		RequestBody []byte `json:"requestbody"`   
+	}
 
-	fmt.Println("this is the way")
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+	var unMarshelData jsonData
+
+	err:=json.Unmarshal(jdata, &unMarshelData)
+	utils.HandleErrorWithLog(err)
+
+	req, err := http.NewRequest(unMarshelData.Method, unMarshelData.Url, bytes.NewBuffer(unMarshelData.RequestBody))
 	utils.HandleErrorWithLog(err)
 	req.Header.Set("Content-Type", "application/json")
 	
@@ -52,10 +62,6 @@ func OFSRequest(jsonData []byte) {
 	reponseBody, err := io.ReadAll(resp.Body)
 
 	fmt.Printf("%s ", reponseBody)
-
-
-
-
 }
 
 func main() {

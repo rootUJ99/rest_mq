@@ -132,8 +132,10 @@ func (v ValkeyModel) handleOrders(w http.ResponseWriter, r *http.Request) {
 	ofsJsonData, err := json.Marshal(orderDetails)
 	utils.HandleErrorWithLog(err)
 
-	fmt.Println("marshelled data")
-	utils.SenderToQueue(ofsJsonData)
+	fmt.Println("marshelled data", string(ofsJsonData))
+
+	url := "http://localhost:6969/make_ofs"
+	utils.SendToQueueWithHttp(url, http.MethodPost,ofsJsonData)
 	err = JSONEncoderWrap(w, orderData)
 	utils.HandleErrorWithLog(err)
 

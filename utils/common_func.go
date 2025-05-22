@@ -2,9 +2,11 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
+
 	ampq "github.com/rabbitmq/amqp091-go"
 )
 
@@ -12,7 +14,8 @@ const ORDERS_QUEUE string = "orders_quqeue"
 
 func HandleErrorWithLog(err error) {
 	if err != nil {
-		log.Panic(err)
+		log.Println(err)
+		// log.Panic(err)
 	}
 }
 
@@ -49,7 +52,23 @@ func DailAndDeclareQuque() (MessageQueue, error){
 	return messageQueue, nil
 }
 
-func SenderToQueue(data []byte){
+func SendToQueueWithHttp(url string, method string, data []byte){
+
+	type jsonData struct {
+		Url string `json:"url"`
+		Method string `json:"method"` 
+		RequestBody []byte `json:"requestbody"`   
+	}
+
+	finalRequestData := jsonData{
+		Url : url,
+		Method: method,
+		RequestBody: data,
+	}
+
+	jsonDataToSend, err := json.Marshal(finalRequestData)
+
+	HandleErrorWithLog(err)
 
 	messageQueue, err := DailAndDeclareQuque()
 	defer messageQueue.Conn.Close()
@@ -59,15 +78,36 @@ func SenderToQueue(data []byte){
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second *10)
 	defer cancel()
 
-	fmt.Printf("got here finally %s", data)
+	fmt.Printf("got here finally %s", jsonDataToSend)
 	err = messageQueue.Channel.PublishWithContext(ctx, "", messageQueue.Queue.Name, false, false, ampq.Publishing{
 		ContentType: "text/pain",
-		Body: data,
+		Body: jsonDataToSend,
 	})
 
 	HandleErrorWithLog(err)
 	
 	fmt.Printf("\n message has been sent")
 }
+
+// func SendToQueue(data []byte){
+//
+// 	messageQueue, err := DailAndDeclareQuque()
+// 	defer messageQueue.Conn.Close()
+// 	defer messageQueue.Channel.Close()
+// 	HandleErrorWithLog(err)
+// 	
+// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second *10)
+// 	defer cancel()
+//
+// 	fmt.Printf("got here finally %s", data)
+// 	err = messageQueue.Channel.PublishWithContext(ctx, "", messageQueue.Queue.Name, false, false, ampq.Publishing{
+// 		ContentType: "text/pain",
+// 		Body: data,
+// 	})
+//
+// 	HandleErrorWithLog(err)
+// 	
+// 	fmt.Printf("\n message has been sent")
+// }
 
 
